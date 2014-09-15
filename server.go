@@ -84,8 +84,8 @@ func (s *Server) handleRequest(req *Task) (err error) {
 		return
 	}
 
-	if c, err := s.connPool.GetConn(addr); err == nil {
-		err = WriteToConn(c, req)
+	if req.OutConn, err = s.connPool.GetConn(addr); err == nil {
+		err = WriteToConn(req.OutConn, req)
 	}
 	if err != nil {
 		PackErrorReply(req, err.Error())

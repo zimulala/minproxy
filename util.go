@@ -50,9 +50,15 @@ func InitConnPool(addrMap map[int]string, connP *util.ConnPool) (err error) {
 	return
 }
 
-func (s *Server) GetAddr(key int) (addr string, err error) {
+func (s *Server) GetAddr(key []byte) (addr string, err error) {
+	var weight int64
+	for _, k := range key {
+		weight += int64(k)
+	}
+
 	var ok bool
-	if addr, ok = s.bucketAddrMap[key]; !ok {
+	bucket := int(weight % int64(len(s.buckets)))
+	if addr, ok = s.bucketAddrMap[bucket]; !ok {
 		err = ErrBadBucketKey
 	}
 

@@ -9,6 +9,7 @@ import (
 
 const (
 	DefaultSize          = 50
+	DefaultRetrys        = 1
 	DefaultRetryInterval = 1
 	ConnType             = "tcp"
 )
@@ -41,6 +42,9 @@ func (connp *ConnPool) NewUnitPool(size int, addr string, timeout, retrys int) (
 	if size < 0 {
 		size = DefaultSize
 	}
+	if retrys <= 0 {
+		retrys = DefaultRetrys
+	}
 	if addr == "" {
 		return nil, ErrAddrEmpty
 	}
@@ -69,7 +73,7 @@ func (p *UnitConnPool) Get() (c *net.TCPConn, err error) {
 			break
 		}
 	}
-	if p.retrys <= 0 || err != nil {
+	if err != nil {
 		return
 	}
 

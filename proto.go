@@ -1,7 +1,18 @@
 package mincluster
 
 import (
+	"errors"
 	"net"
+	"strconv"
+	"strings"
+)
+
+const (
+	ArgSplitStr = "\r\n"
+)
+
+var (
+	ErrBadCmdFormat = errors.New("bad cmd format err")
 )
 
 var (
@@ -16,17 +27,37 @@ type Task struct {
 }
 
 //TODO:
-func UnmarshalPkg(pkg *Task) (key int, err error) {
+func UnmarshalPkg(pkg *Task) (key []byte, err error) {
+	elements := strings.SplitN(string(pkg.Buf), ArgSplitStr, -1)
+	if !strings.Contains(elements[0], "*") {
+		return key, ErrBadCmdFormat
+	}
+	lines, err := strconv.Atoi(elements[0][len("*"):])
+	if err != nil || lines != 3 {
+		return key, ErrBadCmdFormat
+	}
+
+	l, err := strconv.Atoi(elements[3])
+	if err != nil || l != len(elements[4]) {
+		return key, ErrBadCmdFormat
+	}
+	key = []byte(elements[4])
+
 	return
 }
 
-//TODO:
 func IsErrTask(task *Task) (err bool) {
+	if task.Opcode == OpError {
+		err = true
+	}
+
 	return
 }
 
 //TODO:
 func PackErrorReply(res *Task, msg string) {
+	res.Opcode = OpError
+
 	return
 }
 
