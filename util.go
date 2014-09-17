@@ -64,3 +64,7 @@ func (s *Server) GetAddr(key []byte) (addr string, err error) {
 
 	return
 }
+
+func GenerateId() int64 {
+	return time.Now().UnixNano()
+}
