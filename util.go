@@ -2,15 +2,17 @@ package mincluster
 
 import (
 	"errors"
+	"strconv"
 	"time"
 
 	"mincluster/util"
 )
 
 const (
-	ConnTimeout = 5
-	ConnRetrys  = 2
-	ConnSize    = 100
+	ConnTimeout      = 5
+	ConnRetrys       = 2
+	ConnSize         = 100
+	ConnReadDeadline = 5
 )
 
 var (
@@ -25,13 +27,17 @@ func (s *Server) CheckConfig(cfg *util.Config) error {
 	s.ip = cfg.GetString("Ip")
 	s.port = cfg.GetString("Port")
 	buckets := cfg.GetArray("Buckets")
-	bucketAddrMap := cfg.GetInterface("ServerBucket").(map[int]string)
+	bucketAddrMap := cfg.GetInterface("ServerBucket").(map[string]interface{})
 
 	for _, b := range buckets {
-		s.buckets = append(s.buckets, b.(int))
+		s.buckets = append(s.buckets, int(b.(float64)))
 	}
 	for b, addr := range bucketAddrMap {
-		s.bucketAddrMap[b] = addr
+		bInt, err := strconv.Atoi(b)
+		if err != nil {
+			return err
+		}
+		s.bucketAddrMap[bInt] = addr.(string)
 	}
 
 	if s.id == -1 || s.ip == "" || s.port == "" {
