@@ -47,6 +47,8 @@ func (s *Server) ListenAndServe() (err error) {
 		go s.Serve(c)
 	}
 
+	l.Close()
+
 	return
 }
 
@@ -77,13 +79,12 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 
 func (s *Server) handleRequest(req *Task) (err error) {
 	var addr string
-	if key, err := UnmarshalPkg(req); err == nil {
-		addr, err = s.GetAddr(key)
-	}
+	key, err := UnmarshalPkg(req)
 	if err != nil {
 		return
 	}
 
+	addr, err = s.GetAddr(key)
 	if req.OutConn, err = s.connPool.GetConn(addr); err == nil {
 		err = WriteToConn(req.OutConn, req)
 	}
