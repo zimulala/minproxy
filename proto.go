@@ -3,7 +3,6 @@ package mincluster
 import (
 	"bufio"
 	"errors"
-	"io"
 	"net"
 	"strconv"
 	"strings"
@@ -61,11 +60,12 @@ func IsErrTask(task *Task) (err bool) {
 //TODO:
 func PackErrorReply(res *Task, msg string) {
 	res.Opcode = OpError
+	res.Buf = []byte("-" + msg)
 
 	return
 }
 
-func ReadFromConn(c *net.TCPConn) (pkg *Task, err error) {
+func ReadReqs(c *net.TCPConn) (pkg *Task, err error) {
 	c.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
 	reader := bufio.NewReader(net.Conn(c))
 	dataStr, err := reader.ReadString('\n')
@@ -94,8 +94,25 @@ func ReadFromConn(c *net.TCPConn) (pkg *Task, err error) {
 }
 
 //TODO:
-func WriteToConn(c *net.TCPConn, pkg *Task) (err error) {
-	_, err = io.ReadFull(c, pkg.Buf)
+func Write(c *net.TCPConn, pkg *Task) (err error) {
+	writer := bufio.NewWriter(net.Conn(c))
+	_, err = writer.Write((pkg.Buf))
+	if err != nil {
+		return
+	}
+	err = writer.Flush()
+
+	return
+}
+
+//TODO:
+func ReadReply(c *net.TCPConn, pkg *Task) (err error) {
+	c.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
+	reader := bufio.NewReader(net.Conn(c))
+	dataBuf, err := reader.ReadBytes('\n')
+	if err == nil {
+		pkg.Buf = dataBuf
+	}
 
 	return
 }
