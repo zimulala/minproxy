@@ -57,18 +57,18 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 		select {
 		case task := <-taskCh:
 			if IsErrTask(task) {
-				WriteToConn(c, task)
+				Write(c, task)
 				break
 			}
 
-			res, err := ReadFromConn(task.OutConn)
+			err := ReadReply(task.OutConn, task)
 			if err != nil {
-				PackErrorReply(res, err.Error())
+				PackErrorReply(task, err.Error())
 				s.connPool.PutConn(task.OutConn.RemoteAddr().String(), nil)
 			} else {
 				s.connPool.PutConn(task.OutConn.RemoteAddr().String(), task.OutConn)
 			}
-			WriteToConn(c, res)
+			Write(c, task)
 		case <-exitCh:
 			return
 		}
@@ -85,15 +85,19 @@ func (s *Server) handleRequest(req *Task) (err error) {
 	}
 
 	addr, err = s.GetAddr(key)
+	if err != nil {
+		PackErrorReply(req, err.Error())
+		return nil
+	}
+
 	if req.OutConn, err = s.connPool.GetConn(addr); err == nil {
-		err = WriteToConn(req.OutConn, req)
+		err = Write(req.OutConn, req)
 	}
 	if err != nil {
 		PackErrorReply(req, err.Error())
-		err = nil
 	}
 
-	return
+	return nil
 }
 
 func (s *Server) Serve(c net.Conn) {
@@ -106,7 +110,7 @@ func (s *Server) Serve(c net.Conn) {
 	go s.handleReply(conn, taskCh, exitCh)
 
 	for {
-		req, err := ReadFromConn(conn)
+		req, err := ReadReqs(conn)
 		if err != nil {
 			close(exitCh)
 			break
