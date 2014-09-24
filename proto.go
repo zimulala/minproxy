@@ -2,17 +2,24 @@ package mincluster
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"net"
 	"strconv"
-	"strings"
 	"time"
+	//"io"
 )
 
 const (
 	LineNoStr   = "*"
 	DataLenStr  = "$"
 	ArgSplitStr = "\r\n"
+)
+
+var (
+	LineNoBytes   = []byte("*")
+	DataLenBytes  = []byte("$")
+	ArgSplitBytes = []byte("\r\n")
 )
 
 var (
@@ -31,20 +38,16 @@ type Task struct {
 }
 
 func UnmarshalPkg(pkg *Task) (key []byte, err error) {
-	elements := strings.SplitN(string(pkg.Buf), ArgSplitStr, -1)
-	if !strings.Contains(elements[0], LineNoStr) {
-		return key, ErrBadCmdFormat
-	}
-	lines, err := strconv.Atoi(elements[0][len(LineNoStr):])
-	if err != nil || lines != 3 {
+	elements := bytes.SplitN(pkg.Buf, ArgSplitBytes, -1)
+	if !bytes.Contains(elements[0], LineNoBytes) {
 		return key, ErrBadCmdFormat
 	}
 
-	l, err := strconv.Atoi(strings.Trim(elements[3], DataLenStr))
+	l, err := strconv.Atoi(string(bytes.Trim(elements[3], DataLenStr)))
 	if err != nil || l != len(elements[4]) {
 		return key, ErrBadCmdFormat
 	}
-	key = []byte(elements[4])
+	key = elements[4]
 
 	return
 }
@@ -57,7 +60,6 @@ func IsErrTask(task *Task) (err bool) {
 	return
 }
 
-//TODO:
 func PackErrorReply(res *Task, msg string) {
 	res.Opcode = OpError
 	res.Buf = []byte("-" + msg)
@@ -68,20 +70,19 @@ func PackErrorReply(res *Task, msg string) {
 func ReadReqs(c *net.TCPConn) (pkg *Task, err error) {
 	c.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
 	reader := bufio.NewReader(net.Conn(c))
-	dataStr, err := reader.ReadString('\n')
+	data, err := reader.ReadBytes('\n')
 	if err != nil {
 		return
 	}
 
-	if !strings.HasPrefix(dataStr, LineNoStr) {
+	if !bytes.HasPrefix(data, LineNoBytes) {
 		return nil, ErrBadCmdFormat
 	}
-	linesStr := strings.Trim(strings.Trim(dataStr, LineNoStr), ArgSplitStr)
-	lines, err := strconv.Atoi(linesStr)
+	linesBuf := bytes.Trim(bytes.Trim(data, LineNoStr), ArgSplitStr)
+	lines, err := strconv.Atoi(string(linesBuf))
 	if err != nil {
 		return
 	}
-	data := []byte(dataStr)
 	for i := 0; i < lines*2; i++ {
 		buf, err := reader.ReadBytes('\n')
 		if err != nil {
@@ -101,6 +102,7 @@ func Write(c *net.TCPConn, pkg *Task) (err error) {
 		return
 	}
 	err = writer.Flush()
+	//_, err = io.ReadFull(c, pkg.Buf)
 
 	return
 }
@@ -109,10 +111,19 @@ func Write(c *net.TCPConn, pkg *Task) (err error) {
 func ReadReply(c *net.TCPConn, pkg *Task) (err error) {
 	c.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
 	reader := bufio.NewReader(net.Conn(c))
-	dataBuf, err := reader.ReadBytes('\n')
-	if err == nil {
-		pkg.Buf = dataBuf
+	if pkg.Buf, err = reader.ReadBytes('\n'); err != nil {
+		return
 	}
+	if !bytes.Contains(pkg.Buf, DataLenBytes) {
+		return
+	}
+
+	data, err := reader.ReadBytes('\n')
+	if err != nil {
+		return
+	}
+	pkg.Buf = append(pkg.Buf, data...)
+	print("ReadReply end, buf:", string(pkg.Buf), "\n")
 
 	return
 }
