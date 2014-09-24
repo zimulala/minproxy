@@ -57,6 +57,7 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 		select {
 		case task := <-taskCh:
 			if IsErrTask(task) {
+				print("ReadReply  break\n")
 				Write(c, task)
 				break
 			}
@@ -78,6 +79,7 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 }
 
 func (s *Server) handleRequest(req *Task) (err error) {
+	print("handleRequest\n")
 	var addr string
 	key, err := UnmarshalPkg(req)
 	if err != nil {
@@ -101,6 +103,7 @@ func (s *Server) handleRequest(req *Task) (err error) {
 }
 
 func (s *Server) Serve(c net.Conn) {
+	print("Serve\n")
 	conn, _ := c.(*net.TCPConn)
 	conn.SetKeepAlive(true)
 	conn.SetNoDelay(true)
