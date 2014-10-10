@@ -1,0 +1,64 @@
+[64142] 27 Sep 10:57:12.821 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+[64142] 27 Sep 10:57:12.822 * Increased maximum number of open files to 10032 (it was originally set to 256).
+                _._                                                  
+           _.-``__ ''-._                                             
+      _.-``    `.  `_.  ''-._           Redis 2.8.17 (00000000/0) 64 bit
+  .-`` .-```.  ```\/    _.,_ ''-._                                   
+ (    '      ,       .-`  | `,    )     Running in stand alone mode
+ |`-._`-...-` __...-.``-._|'` _.-'|     Port: 6379
+ |    `-._   `._    /     _.-'    |     PID: 64142
+  `-._    `-._  `-./  _.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |           http://redis.io        
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |                                  
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+      `-._    `-.__.-'    _.-'                                       
+          `-._        _.-'                                           
+              `-.__.-'                                               
+
+[64142] 27 Sep 10:57:12.824 # Server started, Redis version 2.8.17
+[64142] 27 Sep 10:57:12.824 * The server is now ready to accept connections on port 6379
+[1122] 08 Oct 15:43:52.791 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+[1122] 08 Oct 15:43:52.795 * Increased maximum number of open files to 10032 (it was originally set to 256).
+                _._                                                  
+           _.-``__ ''-._                                             
+      _.-``    `.  `_.  ''-._           Redis 2.8.17 (00000000/0) 64 bit
+  .-`` .-```.  ```\/    _.,_ ''-._                                   
+ (    '      ,       .-`  | `,    )     Running in stand alone mode
+ |`-._`-...-` __...-.``-._|'` _.-'|     Port: 6379
+ |    `-._   `._    /     _.-'    |     PID: 1122
+  `-._    `-._  `-./  _.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |           http://redis.io        
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |                                  
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+      `-._    `-.__.-'    _.-'                                       
+          `-._        _.-'                                           
+              `-.__.-'                                               
+
+[1122] 08 Oct 15:43:52.802 # Server started, Redis version 2.8.17
+[1122] 08 Oct 15:43:52.803 * The server is now ready to accept connections on port 6379
+[1122] 08 Oct 19:32:05.072 * 1 changes in 3600 seconds. Saving...
+[1122] 08 Oct 19:32:05.072 * Background saving started by pid 3333
+[3333] 08 Oct 19:32:05.682 * DB saved on disk
+[1122] 08 Oct 19:32:05.777 * Background saving terminated with success
+[1122] 09 Oct 10:30:05.708 * 1 changes in 3600 seconds. Saving...
+[1122] 09 Oct 10:30:05.716 * Background saving started by pid 3817
+[3817] 09 Oct 10:30:05.717 * DB saved on disk
+[1122] 09 Oct 10:30:05.817 * Background saving terminated with success
+[1122] 09 Oct 11:30:06.039 * 1 changes in 3600 seconds. Saving...
+[1122] 09 Oct 11:30:06.039 * Background saving started by pid 5331
+[5331] 09 Oct 11:30:06.048 * DB saved on disk
+[1122] 09 Oct 11:30:06.141 * Background saving terminated with success
+[1122] 10 Oct 14:50:48.896 * 1 changes in 3600 seconds. Saving...
+[1122] 10 Oct 14:50:48.904 * Background saving started by pid 5562
+[5562] 10 Oct 14:50:48.907 * DB saved on disk
+[1122] 10 Oct 14:50:49.004 * Background saving terminated with success
+[1122] 10 Oct 18:23:57.013 * 1 changes in 3600 seconds. Saving...
+[1122] 10 Oct 18:23:57.013 * Background saving started by pid 5756
+[5756] 10 Oct 18:23:57.683 * DB saved on disk
+[1122] 10 Oct 18:23:57.720 * Background saving terminated with success

@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	cfgPath = "/home/lala/workspace/src/mincluster/cfg.json"
+	cfgPath = "mincluster/cfg.json"
 	addr    = "127.0.0.1:54320"
+	//addr ="127.0.0.1:6379"
 )
 
 var s = NewServer()
@@ -21,6 +22,10 @@ var writeTests = []struct {
 	args []interface{}
 	data string
 }{
+	// {
+	// 	[]interface{}{"PING"},
+	// 	"*1\r\n$4\r\nPING\r\n",
+	// },
 	{
 		[]interface{}{"SET", "foo", "bar"},
 		"*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n",
@@ -32,6 +37,22 @@ var writeTests = []struct {
 	{
 		[]interface{}{"GET", "foo"},
 		"*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n",
+	},
+	{
+		[]interface{}{"TYPE", "foo"},
+		"*2\r\n$3\r\nDEL\r\n$3\r\nfoo\r\n",
+	},
+	// {
+	// 	[]interface{}{"KEYS", "foo*"},
+	// 	"*2\r\n$4\r\nKEYS\r\n$4\r\nfoo*\r\n",
+	// },
+	{
+		[]interface{}{"DEL", "foo"},
+		"*2\r\n$3\r\nDEL\r\n$3\r\nfoo\r\n",
+	},
+	{
+		[]interface{}{"DEL", "foo"},
+		"*2\r\n$3\r\nDEL\r\n$3\r\nfoo\r\n",
 	},
 	{
 		[]interface{}{"SET", "foo", byte(100)},
@@ -68,7 +89,7 @@ func init() {
 }
 
 func TestBasic(t *testing.T) {
-	conn, err := redis.DialTimeout("tcp", addr, 3*time.Second, 10*time.Second, 5*time.Second)
+	conn, err := redis.DialTimeout("tcp", addr, 3*time.Second, 0, 0)
 	if err != nil {
 		t.Fatalf("dial err:%+v", err)
 	}

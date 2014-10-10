@@ -9,7 +9,7 @@ import (
 
 const (
 	DefaultSize          = 50
-	DefaultRetrys        = 1
+	DefaultTrys          = 1
 	DefaultRetryInterval = 1
 	ConnType             = "tcp"
 )
@@ -29,7 +29,7 @@ type ConnPool struct {
 type UnitConnPool struct {
 	size    int
 	timeout int
-	retrys  int
+	trys    int
 	addr    string
 	pool    chan *net.TCPConn
 }
@@ -38,18 +38,18 @@ func NewConnPool() *ConnPool {
 	return &ConnPool{unitPools: make(map[string]*UnitConnPool)}
 }
 
-func (connp *ConnPool) NewUnitPool(size int, addr string, timeout, retrys int) (p *UnitConnPool, err error) {
+func (connp *ConnPool) NewUnitPool(size int, addr string, timeout, trys int) (p *UnitConnPool, err error) {
 	if size < 0 {
 		size = DefaultSize
 	}
-	if retrys <= 0 {
-		retrys = DefaultRetrys
+	if trys <= 0 {
+		trys = DefaultTrys
 	}
 	if addr == "" {
 		return nil, ErrAddrEmpty
 	}
 
-	p = &UnitConnPool{addr: addr, size: size, timeout: timeout, retrys: retrys, pool: make(chan *net.TCPConn, size)}
+	p = &UnitConnPool{addr: addr, size: size, timeout: timeout, trys: trys, pool: make(chan *net.TCPConn, size)}
 	for i := 0; i < size; i++ {
 		p.pool <- nil
 	}
@@ -68,7 +68,7 @@ func (p *UnitConnPool) Get() (c *net.TCPConn, err error) {
 	default:
 	}
 
-	for i := 0; i < p.retrys; i++ {
+	for i := 0; i < p.trys; i++ {
 		if conn, err = net.DialTimeout(ConnType, p.addr, time.Duration(p.timeout)*time.Second); err == nil {
 			break
 		}

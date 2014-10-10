@@ -7,7 +7,6 @@ import (
 	"net"
 	"strconv"
 	"time"
-	//"io"
 )
 
 const (
@@ -67,9 +66,8 @@ func PackErrorReply(res *Task, msg string) {
 	return
 }
 
-func ReadReqs(c *net.TCPConn) (pkg *Task, err error) {
+func ReadReqs(c *net.TCPConn, reader *bufio.Reader) (pkg *Task, err error) {
 	c.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
-	reader := bufio.NewReader(net.Conn(c))
 	data, err := reader.ReadBytes('\n')
 	if err != nil {
 		return
@@ -91,26 +89,28 @@ func ReadReqs(c *net.TCPConn) (pkg *Task, err error) {
 		data = append(data, buf...)
 	}
 
-	return &Task{Id: GenerateId(), OutConn: c, Buf: data}, nil
+	return &Task{Id: GenerateId(), Buf: data}, nil
 }
 
-//TODO:
-func Write(c *net.TCPConn, pkg *Task) (err error) {
-	writer := bufio.NewWriter(net.Conn(c))
-	_, err = writer.Write((pkg.Buf))
-	if err != nil {
-		return
-	}
-	err = writer.Flush()
-	//_, err = io.ReadFull(c, pkg.Buf)
+func Write(c *net.TCPConn, buf []byte) (err error) {
+	_, err = c.Write(buf)
+	// writer := bufio.NewWriter(net.Conn(c))
+	// _, err = writer.Write((pkg.Buf))
+	// if err != nil {
+	// 	print("write111 err:", err.Error())
+	// 	return
+	// }
+	// err = writer.Flush()
+	// if err != nil {
+	// 	print("write222 err:", err.Error())
+	// }
 
 	return
 }
 
-//TODO:
-func ReadReply(c *net.TCPConn, pkg *Task) (err error) {
-	c.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
-	reader := bufio.NewReader(net.Conn(c))
+func ReadReply(pkg *Task) (err error) {
+	pkg.OutConn.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
+	reader := bufio.NewReader(net.Conn(pkg.OutConn))
 	if pkg.Buf, err = reader.ReadBytes('\n'); err != nil {
 		return
 	}
@@ -123,7 +123,6 @@ func ReadReply(c *net.TCPConn, pkg *Task) (err error) {
 		return
 	}
 	pkg.Buf = append(pkg.Buf, data...)
-	print("ReadReply end, buf:", string(pkg.Buf), "\n")
 
 	return
 }

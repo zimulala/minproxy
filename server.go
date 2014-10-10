@@ -1,6 +1,7 @@
 package mincluster
 
 import (
+	"bufio"
 	"net"
 
 	"mincluster/util"
@@ -57,19 +58,18 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 		select {
 		case task := <-taskCh:
 			if IsErrTask(task) {
-				print("ReadReply  break\n")
-				Write(c, task)
+				Write(c, task.Buf)
 				break
 			}
 
-			err := ReadReply(task.OutConn, task)
+			err := ReadReply(task)
 			if err != nil {
 				PackErrorReply(task, err.Error())
 				s.connPool.PutConn(task.OutConn.RemoteAddr().String(), nil)
 			} else {
 				s.connPool.PutConn(task.OutConn.RemoteAddr().String(), task.OutConn)
 			}
-			Write(c, task)
+			Write(c, task.Buf)
 		case <-exitCh:
 			return
 		}
@@ -79,7 +79,6 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 }
 
 func (s *Server) handleRequest(req *Task) (err error) {
-	print("handleRequest\n")
 	var addr string
 	key, err := UnmarshalPkg(req)
 	if err != nil {
@@ -93,7 +92,7 @@ func (s *Server) handleRequest(req *Task) (err error) {
 	}
 
 	if req.OutConn, err = s.connPool.GetConn(addr); err == nil {
-		err = Write(req.OutConn, req)
+		err = Write(req.OutConn, req.Buf)
 	}
 	if err != nil {
 		PackErrorReply(req, err.Error())
@@ -103,17 +102,17 @@ func (s *Server) handleRequest(req *Task) (err error) {
 }
 
 func (s *Server) Serve(c net.Conn) {
-	print("Serve\n")
 	conn, _ := c.(*net.TCPConn)
 	conn.SetKeepAlive(true)
 	conn.SetNoDelay(true)
+	reader := bufio.NewReader(c)
 	taskCh := make(chan *Task, 1024)
 	exitCh := make(chan Sigal, 1)
 
 	go s.handleReply(conn, taskCh, exitCh)
 
 	for {
-		req, err := ReadReqs(conn)
+		req, err := ReadReqs(conn, reader)
 		if err != nil {
 			close(exitCh)
 			break
