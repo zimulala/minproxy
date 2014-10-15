@@ -2,7 +2,7 @@ package mincluster
 
 import (
 	"github.com/garyburd/redigo/redis"
-	"math"
+	//"math"
 	"runtime"
 	"testing"
 	"time"
@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	cfgPath = "mincluster/cfg.json"
-	addr    = "127.0.0.1:54320"
-	//addr ="127.0.0.1:6379"
+	cfgPath = "/Users/lixia/Documents/project/src/mincluster/cfg.json"
+	addr    = "127.0.0.1:9000"
+	//addr = "127.0.0.1:6379"
 )
 
 var s = NewServer()
@@ -23,9 +23,25 @@ var writeTests = []struct {
 	data string
 }{
 	// {
-	// 	[]interface{}{"PING"},
-	// 	"*1\r\n$4\r\nPING\r\n",
+	// 	[]interface{}{"HGET", "myhash", "foo"},
+	// 	"*3\r\n$4\r\nHGET\r\n$6\r\nmyhash\r\n$3\r\nfoo\r\n",
 	// },
+	{
+		[]interface{}{"HDEL", "myhash", "foo"},
+		"*3\r\n$4\r\nHDEL\r\n$6\r\nmyhash\r\n$3\r\nfoo\r\n",
+	},
+	{
+		[]interface{}{"HSET", "myhash", "foo", 2},
+		"*4\r\n$4\r\nHSET\r\n$6\r\nmyhash\r\n$3\r\nfoo\r\n$1\r\n2\r\n",
+	},
+	{
+		[]interface{}{"HIncrBy", "myhash", "foo", 2},
+		"*4\r\n$7\r\nHIncrBy\r\n$6\r\nmyhash\r\n$3\r\nfoo\r\n$1\r\n2\r\n",
+	},
+	{
+		[]interface{}{"HGET", "myhash", "foo"},
+		"*3\r\n$4\r\nHGET\r\n$6\r\nmyhash\r\n$3\r\nfoo\r\n",
+	},
 	{
 		[]interface{}{"SET", "foo", "bar"},
 		"*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n",
@@ -42,10 +58,34 @@ var writeTests = []struct {
 		[]interface{}{"TYPE", "foo"},
 		"*2\r\n$3\r\nDEL\r\n$3\r\nfoo\r\n",
 	},
-	// {
-	// 	[]interface{}{"KEYS", "foo*"},
-	// 	"*2\r\n$4\r\nKEYS\r\n$4\r\nfoo*\r\n",
-	// },
+	{
+		[]interface{}{"EXISTS", "foo"},
+		"*2\r\n$6\r\nEXISTS\r\n$3\r\nfoo\r\n",
+	},
+	{
+		[]interface{}{"PERSIST", "foo"},
+		"*2\r\n$7\r\nPERSIST\r\n$3\r\nfoo\r\n",
+	},
+	{
+		[]interface{}{"EXPIRE", "foo", 10},
+		"*3\r\n$6\r\nEXPIRE\r\n$3\r\nfoo\r\n$2\r\n10\r\n",
+	},
+	{
+		[]interface{}{"PERSIST", "foo"},
+		"*2\r\n$7\r\nPERSIST\r\n$3\r\nfoo\r\n",
+	},
+	{
+		[]interface{}{"TTL", "foo"},
+		"*2\r\n$3\r\nTTL\r\n$3\r\nfoo\r\n",
+	},
+	{
+		[]interface{}{"EXPIREAT", "foo", 1293840000},
+		"*3\r\n$8\r\nEXPIREAT\r\n$3\r\nfoo\r\n$10\r\n1293840000\r\n",
+	},
+	{
+		[]interface{}{"EXPIREAT", "foo", 1293840000},
+		"*3\r\n$8\r\nEXPIREAT\r\n$3\r\nfoo\r\n$10\r\n1293840000\r\n",
+	},
 	{
 		[]interface{}{"DEL", "foo"},
 		"*2\r\n$3\r\nDEL\r\n$3\r\nfoo\r\n",
@@ -89,7 +129,7 @@ func init() {
 }
 
 func TestBasic(t *testing.T) {
-	conn, err := redis.DialTimeout("tcp", addr, 3*time.Second, 0, 0)
+	conn, err := redis.DialTimeout("tcp", addr, 10*time.Second, 0, 0)
 	if err != nil {
 		t.Fatalf("dial err:%+v", err)
 	}
@@ -100,6 +140,6 @@ func TestBasic(t *testing.T) {
 			t.Errorf("Do(%v) returned error %v", tt.args, err)
 			continue
 		}
-		t.Log("reply:", reply)
+		t.Log(tt.args[0].(string), " reply:", reply)
 	}
 }
