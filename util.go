@@ -64,7 +64,7 @@ func (s *Server) GetAddr(key []byte) (addr string, err error) {
 	}
 
 	var ok bool
-	bucket := int(weight % int64(len(s.buckets)))
+	bucket := int(weight % int64(len(s.buckets)/2))
 	if addr, ok = s.bucketAddrMap[bucket]; !ok {
 		err = ErrBadBucketKey
 	}
