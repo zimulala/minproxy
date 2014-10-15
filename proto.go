@@ -23,6 +23,7 @@ var (
 
 var (
 	ErrBadCmdFormat = errors.New("bad cmd format err")
+	ErrBadArgsNum   = errors.New("bad args num err")
 )
 
 var (
@@ -30,23 +31,51 @@ var (
 )
 
 type Task struct {
-	Opcode  uint8
-	Id      int64
-	OutConn *net.TCPConn
-	Buf     []byte
+	Opcode    uint8
+	Id        int64
+	OutReader *bufio.Reader
+	OutConn   *net.TCPConn
+	Buf       []byte
 }
 
+/*
+*3\r\n
+$4\r\n
+HSET\r\n
+$6\r\n
+myhash\r\n
+$5\r\n
+field1\r\n
+$3\r\n
+foo\r\n
+*/
 func UnmarshalPkg(pkg *Task) (key []byte, err error) {
+	print("req:", string(pkg.Buf))
 	elements := bytes.SplitN(pkg.Buf, ArgSplitBytes, -1)
 	if !bytes.Contains(elements[0], LineNoBytes) {
 		return key, ErrBadCmdFormat
 	}
 
-	l, err := strconv.Atoi(string(bytes.Trim(elements[3], DataLenStr)))
-	if err != nil || l != len(elements[4]) {
-		return key, ErrBadCmdFormat
+	var lenBuf []byte
+	switch elements[2][0] {
+	case 'z', 'Z':
+		if len(elements) < 9 {
+			return nil, ErrBadArgsNum
+		}
+		lenBuf = elements[7]
+		key = elements[8]
+	default:
+		if len(elements) < 5 {
+			return nil, ErrBadArgsNum
+		}
+		lenBuf = elements[3]
+		key = elements[4]
 	}
-	key = elements[4]
+
+	l, err := strconv.Atoi(string(bytes.Trim(lenBuf, DataLenStr)))
+	if err != nil || l != len(key) {
+		return nil, ErrBadCmdFormat
+	}
 
 	return
 }
@@ -61,13 +90,13 @@ func IsErrTask(task *Task) (err bool) {
 
 func PackErrorReply(res *Task, msg string) {
 	res.Opcode = OpError
-	res.Buf = []byte("-" + msg)
+	res.Buf = []byte("-" + msg + "\r\n")
 
 	return
 }
 
 func ReadReqs(c *net.TCPConn, reader *bufio.Reader) (pkg *Task, err error) {
-	c.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
+	//c.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
 	data, err := reader.ReadBytes('\n')
 	if err != nil {
 		return
@@ -94,16 +123,6 @@ func ReadReqs(c *net.TCPConn, reader *bufio.Reader) (pkg *Task, err error) {
 
 func Write(c *net.TCPConn, buf []byte) (err error) {
 	_, err = c.Write(buf)
-	// writer := bufio.NewWriter(net.Conn(c))
-	// _, err = writer.Write((pkg.Buf))
-	// if err != nil {
-	// 	print("write111 err:", err.Error())
-	// 	return
-	// }
-	// err = writer.Flush()
-	// if err != nil {
-	// 	print("write222 err:", err.Error())
-	// }
 
 	return
 }
