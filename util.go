@@ -1,6 +1,7 @@
 package mincluster
 
 import (
+	"bytes"
 	"errors"
 	"strconv"
 	"time"
