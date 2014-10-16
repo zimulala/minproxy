@@ -2,7 +2,7 @@ package mincluster
 
 import (
 	"github.com/garyburd/redigo/redis"
-	//"math"
+	"math"
 	"runtime"
 	"testing"
 	"time"
@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	cfgPath = "/Users/lixia/Documents/project/src/mincluster/cfg.json"
+	cfgPath = "cfg.json"
 	addr    = "127.0.0.1:9000"
 	//addr = "127.0.0.1:6379"
 )
