@@ -75,3 +75,11 @@ func (s *Server) GetAddr(key []byte) (addr string, err error) {
 func GenerateId() int64 {
 	return time.Now().UnixNano()
 }
+
+func Trims(src []byte, cutset ...string) []byte {
+	for _, cut := range cutset {
+		src = bytes.Trim(src, cut)
+	}
+
+	return src
+}
