@@ -95,6 +95,23 @@ func PackErrorReply(res *Task, msg string) {
 	return
 }
 
+func readMutilLinesData(r *bufio.Reader, data *[]byte) (err error) {
+	lines, err := strconv.Atoi(string(Trims(*data, LineNumStr, ArgSplitStr)))
+	if err != nil {
+		return
+	}
+
+	for i := 0; i < lines*2; i++ {
+		buf, err := r.ReadBytes('\n')
+		if err != nil {
+			return err
+		}
+		*data = append(*data, buf...)
+	}
+
+	return
+}
+
 func ReadReqs(c *net.TCPConn, reader *bufio.Reader) (pkg *Task, err error) {
 	//c.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
 	data, err := reader.ReadBytes('\n')
@@ -105,17 +122,8 @@ func ReadReqs(c *net.TCPConn, reader *bufio.Reader) (pkg *Task, err error) {
 	if !bytes.HasPrefix(data, LineNumBytes) {
 		return nil, ErrBadCmdFormat
 	}
-	linesBuf := bytes.Trim(bytes.Trim(data, LineNumStr), ArgSplitStr)
-	lines, err := strconv.Atoi(string(linesBuf))
-	if err != nil {
+	if err = readMutilLinesData(reader, &data); err != nil {
 		return
-	}
-	for i := 0; i < lines*2; i++ {
-		buf, err := reader.ReadBytes('\n')
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, buf...)
 	}
 
 	return &Task{Id: GenerateId(), Buf: data}, nil
@@ -133,15 +141,21 @@ func ReadReply(pkg *Task) (err error) {
 	if pkg.Buf, err = reader.ReadBytes('\n'); err != nil {
 		return
 	}
-	if !bytes.Contains(pkg.Buf, LineNumBytes) {
+	if !bytes.HasPrefix(pkg.Buf, LineNumBytes) && !bytes.HasPrefix(pkg.Buf, DataLenBytes) {
 		return
 	}
 
-	data, err := reader.ReadBytes('\n')
-	if err != nil {
-		return
-	}
-	pkg.Buf = append(pkg.Buf, data...)
+	if bytes.HasPrefix(pkg.Buf, DataLenBytes) {
+		if bufL, err := strconv.Atoi(string(Trims(pkg.Buf, DataLenStr, ArgSplitStr))); err != nil || bufL <= 0 {
+			return err
+		}
 
-	return
+		buf, err := reader.ReadBytes('\n')
+		if err == nil {
+			pkg.Buf = append(pkg.Buf, buf...)
+		}
+		return err
+	}
+
+	return readMutilLinesData(reader, &pkg.Buf)
 }
