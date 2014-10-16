@@ -10,13 +10,13 @@ import (
 )
 
 const (
-	LineNoStr   = "*"
+	LineNumStr  = "*"
 	DataLenStr  = "$"
 	ArgSplitStr = "\r\n"
 )
 
 var (
-	LineNoBytes   = []byte("*")
+	LineNumBytes  = []byte("*")
 	DataLenBytes  = []byte("$")
 	ArgSplitBytes = []byte("\r\n")
 )
@@ -52,7 +52,7 @@ foo\r\n
 func UnmarshalPkg(pkg *Task) (key []byte, err error) {
 	print("req:", string(pkg.Buf))
 	elements := bytes.SplitN(pkg.Buf, ArgSplitBytes, -1)
-	if !bytes.Contains(elements[0], LineNoBytes) {
+	if !bytes.Contains(elements[0], LineNumBytes) {
 		return key, ErrBadCmdFormat
 	}
 
@@ -102,10 +102,10 @@ func ReadReqs(c *net.TCPConn, reader *bufio.Reader) (pkg *Task, err error) {
 		return
 	}
 
-	if !bytes.HasPrefix(data, LineNoBytes) {
+	if !bytes.HasPrefix(data, LineNumBytes) {
 		return nil, ErrBadCmdFormat
 	}
-	linesBuf := bytes.Trim(bytes.Trim(data, LineNoStr), ArgSplitStr)
+	linesBuf := bytes.Trim(bytes.Trim(data, LineNumStr), ArgSplitStr)
 	lines, err := strconv.Atoi(string(linesBuf))
 	if err != nil {
 		return
@@ -133,7 +133,7 @@ func ReadReply(pkg *Task) (err error) {
 	if pkg.Buf, err = reader.ReadBytes('\n'); err != nil {
 		return
 	}
-	if !bytes.Contains(pkg.Buf, DataLenBytes) {
+	if !bytes.Contains(pkg.Buf, LineNumBytes) {
 		return
 	}
 
