@@ -110,8 +110,10 @@ func readMutilLinesData(r *bufio.Reader, data *[]byte) (err error) {
 		if !bytes.HasPrefix(buf, DataLenBytes) {
 			continue
 		}
-		if bufL, err := strconv.Atoi(string(Trims(buf, DataLenStr, ArgSplitStr))); err != nil || bufL <= 0 {
+		if bufL, err := strconv.Atoi(string(Trims(buf, DataLenStr, ArgSplitStr))); err != nil || bufL < 0 {
 			return err
+		} else if bufL == 0 && i == (lines-1)*2 {
+			return nil
 		}
 	}
 
