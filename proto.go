@@ -50,21 +50,20 @@ $3\r\n
 foo\r\n
 */
 func UnmarshalPkg(pkg *Task) (key []byte, err error) {
-	print("req:", string(pkg.Buf))
 	elements := bytes.SplitN(pkg.Buf, ArgSplitBytes, -1)
-	if !bytes.Contains(elements[0], LineNumBytes) {
+	if !bytes.HasPrefix(elements[0], LineNumBytes) {
 		return key, ErrBadCmdFormat
 	}
 
 	var lenBuf []byte
-	switch elements[2][0] {
-	case 'z', 'Z':
-		if len(elements) < 9 {
-			return nil, ErrBadArgsNum
-		}
-		lenBuf = elements[7]
-		key = elements[8]
-	default:
+	rows, err := strconv.Atoi(string(Trims(elements[0], LineNumStr, ArgSplitStr)))
+	if err != nil {
+		return
+	}
+	switch rows <= 1 {
+	case true:
+		return nil, ErrBadArgsNum
+	case false:
 		if len(elements) < 5 {
 			return nil, ErrBadArgsNum
 		}
@@ -72,8 +71,8 @@ func UnmarshalPkg(pkg *Task) (key []byte, err error) {
 		key = elements[4]
 	}
 
-	l, err := strconv.Atoi(string(bytes.Trim(lenBuf, DataLenStr)))
-	if err != nil || l != len(key) {
+	argLen, err := strconv.Atoi(string(bytes.Trim(lenBuf, DataLenStr)))
+	if err != nil || argLen != len(key) {
 		return nil, ErrBadCmdFormat
 	}
 
