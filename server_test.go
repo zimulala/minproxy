@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	cfgPath = "cfg.json"
+	cfgPath = "/Users/lixia/projects/src/mincluster/cfg.json"
 	addr    = "127.0.0.1:9000"
 	//addr = "127.0.0.1:6379"
 )
@@ -22,10 +22,26 @@ var writeTests = []struct {
 	args []interface{}
 	data string
 }{
-	// {
-	// 	[]interface{}{"HGET", "myhash", "foo"},
-	// 	"*3\r\n$4\r\nHGET\r\n$6\r\nmyhash\r\n$3\r\nfoo\r\n",
-	// },
+	{
+		[]interface{}{"ZADD", "salary", 9000, "tom"},
+		"*4\r\n$4\r\nZADD\r\n$6\r\nsalary\r\n$4\r\n9000\r\n$3\r\ntom\r\n",
+	},
+	{
+		[]interface{}{"ZADD", "salary", 15000, "lily"},
+		"*4\r\n$4\r\nZADD\r\n$6\r\nsalary\r\n$5\r\n15000\r\n$4\r\nlily\r\n",
+	},
+	{
+		[]interface{}{"ZADD", "salary", 33000, "lala"},
+		"*4\r\n$4\r\nZADD\r\n$6\r\nsalary\r\n$5\r\n33000\r\n$4\r\nlala\r\n",
+	},
+	{
+		[]interface{}{"ZCARD", "salary"},
+		"*2\r\n$5\r\nZCARD\r\n$6\r\nsalary\r\n",
+	},
+	{
+		[]interface{}{"HGET", "myhash", "foo"},
+		"*3\r\n$4\r\nHGET\r\n$6\r\nmyhash\r\n$3\r\nfoo\r\n",
+	},
 	{
 		[]interface{}{"HDEL", "myhash", "foo"},
 		"*3\r\n$4\r\nHDEL\r\n$6\r\nmyhash\r\n$3\r\nfoo\r\n",
