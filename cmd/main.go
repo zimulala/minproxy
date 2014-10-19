@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
-	"os/signal"
 	"runtime"
 
 	"mincluster"
