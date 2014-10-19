@@ -27,7 +27,7 @@ func main() {
 	}
 
 	go func() {
-		log.Fatalln("failed to listen and serve, err:", http.ListenAndServe(pprof, nil))
+		log.Fatalln("failed to listen and serve, err:", http.ListenAndServe(":"+pprof, nil))
 	}()
 
 	s := mincluster.NewServer()
