@@ -107,14 +107,21 @@ func readMutilLinesData(r *bufio.Reader, data *[]byte) (err error) {
 		}
 		*data = append(*data, buf...)
 
+		if bytes.HasPrefix(buf, LineNumBytes) {
+			i = -1
+			lines, err = strconv.Atoi(string(Trims(buf, LineNumStr, ArgSplitStr)))
+			continue
+		}
+
 		if !bytes.HasPrefix(buf, DataLenBytes) {
 			continue
 		}
 		if bufL, err := strconv.Atoi(string(Trims(buf, DataLenStr, ArgSplitStr))); err != nil || bufL < 0 {
 			return err
-		} else if bufL == 0 && i == (lines-1)*2 {
-			return nil
 		}
+		// else if bufL == 0 && i == (lines-1)*2 {
+		// 	return nil
+		// }
 	}
 
 	return
@@ -154,7 +161,7 @@ func ReadReply(pkg *Task) (err error) {
 	}
 
 	if bytes.HasPrefix(pkg.Buf, DataLenBytes) {
-		if bufL, err := strconv.Atoi(string(Trims(pkg.Buf, DataLenStr, ArgSplitStr))); err != nil || bufL <= 0 {
+		if bufL, err := strconv.Atoi(string(Trims(pkg.Buf, DataLenStr, ArgSplitStr))); err != nil || bufL < 0 {
 			return err
 		}
 
@@ -162,6 +169,7 @@ func ReadReply(pkg *Task) (err error) {
 		if err == nil {
 			pkg.Buf = append(pkg.Buf, buf...)
 		}
+
 		return err
 	}
 
