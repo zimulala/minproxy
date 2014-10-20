@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	cfgPath = "/Users/lixia/projects/src/mincluster/cfg.json"
+	cfgPath = "cfg.json"
 	addr    = "127.0.0.1:9000"
 	//addr = "127.0.0.1:6379"
 )
@@ -22,6 +22,22 @@ var writeTests = []struct {
 	args []interface{}
 	data string
 }{
+	{
+		[]interface{}{"DEL", "key"},
+		"*2\r\n$3\r\nDEL\r\n$3\r\nkey\r\n",
+	},
+	{
+		[]interface{}{"GETSET", "key", "val"},
+		"*3\r\n$6\r\nGETSET\r\n$3\r\nkey\r\n$3\r\nval\r\n",
+	},
+	{
+		[]interface{}{"GETSET", "key", ""},
+		"*3\r\n$6\r\nGETSET\r\n$3\r\nkey\r\n$0\r\n\r\n",
+	},
+	{
+		[]interface{}{"GET", "key"},
+		"*2\r\n$3\r\nGET\r\n$3\r\nkey\r\n",
+	},
 	{
 		[]interface{}{"ZADD", "salary", 9000, "tom"},
 		"*4\r\n$4\r\nZADD\r\n$6\r\nsalary\r\n$4\r\n9000\r\n$3\r\ntom\r\n",
