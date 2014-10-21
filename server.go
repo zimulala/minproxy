@@ -3,17 +3,21 @@ package mincluster
 import (
 	"bufio"
 	"net"
+	"sync"
 
 	"mincluster/util"
 )
 
 type Server struct {
-	id            int
-	ip            string
-	port          string
-	connPool      *util.ConnPool
+	id       int
+	ip       string
+	port     string
+	connPool *util.ConnPool
+
+	reBuckets     int
 	buckets       []int
 	bucketAddrMap map[int]string //key: bucket, val: serverAddr
+	bucketMux     sync.RWMutex
 }
 
 func NewServer() *Server {
@@ -69,7 +73,7 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 			} else {
 				s.connPool.PutConn(task.OutConn.RemoteAddr().String(), task.OutConn)
 			}
-			Write(c, task.Buf)
+			err = Write(c, task.Buf)
 		case <-exitCh:
 			return
 		}
@@ -79,6 +83,7 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 }
 
 func (s *Server) handleRequest(req *Task) (err error) {
+	print("handleRequest, id:", req.Id, "\n")
 	var addr string
 	key, err := UnmarshalPkg(req)
 	if err != nil {
@@ -123,6 +128,5 @@ func (s *Server) Serve(c net.Conn) {
 		}
 		taskCh <- req
 	}
-
 	conn.Close()
 }
