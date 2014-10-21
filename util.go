@@ -27,6 +27,7 @@ func (s *Server) CheckConfig(cfg *util.Config) error {
 	s.id = cfg.GetInt("Id")
 	s.ip = cfg.GetString("Ip")
 	s.port = cfg.GetString("Port")
+	s.reBuckets = cfg.GetInt("ReBuckets")
 	buckets := cfg.GetArray("Buckets")
 	bucketAddrMap := cfg.GetInterface("ServerBucket").(map[string]interface{})
 
@@ -65,7 +66,10 @@ func (s *Server) GetAddr(key []byte) (addr string, err error) {
 	}
 
 	var ok bool
-	bucket := int(weight % int64(len(s.buckets)/2))
+	s.bucketMux.RLock()
+	defer s.bucketMux.RUnlock()
+
+	bucket := int(weight % int64(len(s.buckets)/s.reBuckets))
 	if addr, ok = s.bucketAddrMap[bucket]; !ok {
 		err = ErrBadBucketKey
 	}
