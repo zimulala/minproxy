@@ -14,11 +14,13 @@ const (
 	ConnRetrys       = 2
 	ConnSize         = 100
 	ConnReadDeadline = 5
+	ConnOk           = 0
 )
 
 var (
 	ErrBadConfig    = errors.New("bad config err")
 	ErrBadBucketKey = errors.New("bad bucket key err")
+	ErrHandleConn   = errors.New("get or write conn err")
 )
 
 type Sigal struct{}
@@ -59,19 +61,25 @@ func InitConnPool(addrMap map[int]string, connP *util.ConnPool) (err error) {
 	return
 }
 
-func (s *Server) GetAddr(key []byte) (addr string, err error) {
-	var weight int64
-	for _, k := range key {
-		weight += int64(k)
+func (s *Server) GetAddrs(pkg *Task) (addrs []string, err error) {
+	weights := make([]int64, len(pkg.OutInfos))
+	addrs = make([]string, len(pkg.OutInfos))
+
+	for i, info := range pkg.OutInfos {
+		for _, k := range info.key {
+			weights[i] += int64(k)
+		}
 	}
 
-	var ok bool
 	s.bucketMux.RLock()
 	defer s.bucketMux.RUnlock()
-
-	bucket := int(weight % int64(len(s.buckets)/s.reBuckets))
-	if addr, ok = s.bucketAddrMap[bucket]; !ok {
-		err = ErrBadBucketKey
+	for i, w := range weights {
+		bucket := int(w % int64(len(s.buckets)/s.reBuckets))
+		addr, ok := s.bucketAddrMap[bucket]
+		if !ok {
+			return nil, ErrBadBucketKey
+		}
+		addrs[i] = addr
 	}
 
 	return
@@ -87,4 +95,14 @@ func Trims(src []byte, cutset ...string) []byte {
 	}
 
 	return src
+}
+
+func (s *Server) ReleaseConns(pkg *Task) {
+	for _, info := range pkg.OutInfos {
+		if !info.badConn {
+			s.connPool.PutConn(info.conn.RemoteAddr().String(), info.conn)
+			continue
+		}
+		s.connPool.PutConn(info.conn.RemoteAddr().String(), nil)
+	}
 }
