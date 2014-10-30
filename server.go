@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"net"
 	"sync"
+	"sync/atomic"
 
 	"mincluster/util"
 )
@@ -61,19 +62,27 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 	for {
 		select {
 		case task := <-taskCh:
-			if IsErrTask(task) {
+			if task.IsErrTask() {
 				Write(c, task.Buf)
+				s.ReleaseConns(task)
 				break
 			}
 
-			err := ReadReply(task)
-			if err != nil {
-				PackErrorReply(task, err.Error())
-				s.connPool.PutConn(task.OutConn.RemoteAddr().String(), nil)
-			} else {
-				s.connPool.PutConn(task.OutConn.RemoteAddr().String(), task.OutConn)
+			wg := sync.WaitGroup{}
+			for _, info := range task.OutInfos {
+				wg.Add(1)
+				go func() {
+					if err := ReadReply(info); err != nil {
+						info.badConn = true
+					}
+					wg.Done()
+				}()
 			}
-			err = Write(c, task.Buf)
+
+			wg.Wait()
+			//todo: merge result
+			//task.PackErrorReply(err.Error())
+			err := Write(c, task.Buf)
 		case <-exitCh:
 			return
 		}
@@ -82,25 +91,47 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 	return
 }
 
+func (s *Server) GetConnsToWrite(addrs []string, pkg *Task) (err error) {
+	isErr := uint32(ConnOk)
+	wg := sync.WaitGroup{}
+
+	for i, info := range pkg.OutInfos {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if info.conn, err = s.connPool.GetConn(addrs[i]); err != nil {
+				info.badConn = true
+				atomic.StoreUint32(&isErr, 1)
+				return
+			}
+			if err = Write(info.conn, pkg.Buf); err != nil {
+				info.badConn = true
+				atomic.StoreUint32(&isErr, 1)
+			}
+		}()
+	}
+	wg.Wait()
+
+	if isErr != ConnOk {
+		err = ErrHandleConn
+	}
+
+	return
+}
+
 func (s *Server) handleRequest(req *Task) (err error) {
-	print("handleRequest, id:", req.Id, "\n")
-	var addr string
-	key, err := UnmarshalPkg(req)
-	if err != nil {
+	if err = UnmarshalPkg(req); err != nil {
 		return
 	}
 
-	addr, err = s.GetAddr(key)
+	addrs, err := s.GetAddrs(req)
 	if err != nil {
-		PackErrorReply(req, err.Error())
+		req.PackErrorReply(err.Error())
 		return nil
 	}
 
-	if req.OutConn, err = s.connPool.GetConn(addr); err == nil {
-		err = Write(req.OutConn, req.Buf)
-	}
-	if err != nil {
-		PackErrorReply(req, err.Error())
+	if err = s.GetConnsToWrite(addrs, req); err != nil {
+		req.PackErrorReply(err.Error())
 	}
 
 	return nil
