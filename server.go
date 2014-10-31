@@ -72,7 +72,7 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 			for _, info := range task.OutInfos {
 				wg.Add(1)
 				go func() {
-					if err := ReadReply(info); err != nil {
+					if err := info.ReadReply(); err != nil {
 						info.badConn = true
 					}
 					wg.Done()
@@ -80,8 +80,9 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 			}
 
 			wg.Wait()
-			//todo: merge result
-			//task.PackErrorReply(err.Error())
+			if err := task.MergeReplys(); err != nil {
+				task.PackErrorReply(err.Error())
+			}
 			err := Write(c, task.Buf)
 		case <-exitCh:
 			return
@@ -91,11 +92,11 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 	return
 }
 
-func (s *Server) GetConnsToWrite(addrs []string, pkg *Task) (err error) {
+func (s *Server) GetConnsToWrite(addrs []string, task *Task) (err error) {
 	isErr := uint32(ConnOk)
 	wg := sync.WaitGroup{}
 
-	for i, info := range pkg.OutInfos {
+	for i, info := range task.OutInfos {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -104,7 +105,7 @@ func (s *Server) GetConnsToWrite(addrs []string, pkg *Task) (err error) {
 				atomic.StoreUint32(&isErr, 1)
 				return
 			}
-			if err = Write(info.conn, pkg.Buf); err != nil {
+			if err = Write(info.conn, task.Buf); err != nil {
 				info.badConn = true
 				atomic.StoreUint32(&isErr, 1)
 			}
@@ -120,7 +121,7 @@ func (s *Server) GetConnsToWrite(addrs []string, pkg *Task) (err error) {
 }
 
 func (s *Server) handleRequest(req *Task) (err error) {
-	if err = UnmarshalPkg(req); err != nil {
+	if err = req.UnmarshalPkg(); err != nil {
 		return
 	}
 
