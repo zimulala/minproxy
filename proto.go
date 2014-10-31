@@ -24,6 +24,7 @@ var (
 var (
 	ErrBadCmdFormat = errors.New("bad cmd format err")
 	ErrBadArgsNum   = errors.New("bad args num err")
+	ErrReadConn     = errors.New("read conn err")
 )
 
 var (
@@ -60,7 +61,7 @@ func (t *Task) PackErrorReply(msg string) {
 	return
 }
 
-func getMKeys(e [][]byte, pkg *Task) {
+func (t *Task) getMKeys(e [][]byte) {
 	interval := 2
 	val := ArgSplitBytes
 	if string(e[2]) == "mset" {
@@ -75,7 +76,7 @@ func getMKeys(e [][]byte, pkg *Task) {
 
 		info := &UnitPkg{uId: i - begin, key: e[i+1],
 			data: bytes.Join([][]byte{[]byte("*3"), e[1], e[2], e[i], e[i+1], val}, ArgSplitBytes)}
-		pkg.OutInfos = append(pkg.OutInfos, info)
+		t.OutInfos = append(t.OutInfos, info)
 	}
 
 	return
@@ -92,8 +93,8 @@ field1\r\n
 $0\r\n
 \r\n
 */
-func UnmarshalPkg(pkg *Task) (err error) {
-	elements := bytes.SplitN(pkg.Buf, ArgSplitBytes, -1)
+func (t *Task) UnmarshalPkg() (err error) {
+	elements := bytes.SplitN(t.Buf, ArgSplitBytes, -1)
 	if !bytes.HasPrefix(elements[0], LineNumBytes) {
 		return ErrBadCmdFormat
 	}
@@ -110,15 +111,59 @@ func UnmarshalPkg(pkg *Task) (err error) {
 			return ErrBadArgsNum
 		}
 		if string(elements[2]) == "mset" || string(elements[2]) == "mget" {
-			getMKeys(elements, pkg)
+			t.getMKeys(elements)
 			break
 		}
 
-		pkg.OutInfos = append(pkg.OutInfos, &UnitPkg{uId: 0, key: elements[4], data: pkg.Buf})
+		t.OutInfos = append(t.OutInfos, &UnitPkg{uId: 0, key: elements[4], data: t.Buf})
 		// argLen, err := strconv.Atoi(string(bytes.Trim(elements[3], DataLenStr)))
 		// if err != nil || argLen != len(key) {
 		// 	return ErrBadCmdFormat
 		// }
+	}
+
+	return
+}
+
+func (p *UnitPkg) ReadReply() (err error) {
+	p.conn.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
+	reader := bufio.NewReader(net.Conn(p.conn))
+	if p.data, err = reader.ReadBytes('\n'); err != nil {
+		return
+	}
+	if !bytes.HasPrefix(p.data, LineNumBytes) && !bytes.HasPrefix(p.data, DataLenBytes) {
+		return
+	}
+
+	if bytes.HasPrefix(p.data, DataLenBytes) {
+		if bufL, err := strconv.Atoi(string(Trims(p.data, DataLenStr, ArgSplitStr))); err != nil || bufL < 0 {
+			return err
+		}
+
+		buf, err := reader.ReadBytes('\n')
+		if err == nil {
+			p.data = append(p.data, buf...)
+		}
+
+		return err
+	}
+
+	return readMutilLinesData(reader, &p.data)
+}
+
+func (t *Task) MergeReplys() (err error) {
+	lines := len(t.OutInfos)
+	if lines == 1 {
+		t.Buf = t.OutInfos[0].data
+		return
+	}
+
+	t.Buf = append(LineNumBytes, byte(lines))
+	for _, info := range t.OutInfos {
+		if info.badConn {
+			return ErrReadConn
+		}
+		t.Buf = append(t.Buf, info.data...)
 	}
 
 	return
@@ -157,7 +202,7 @@ func readMutilLinesData(r *bufio.Reader, data *[]byte) (err error) {
 	return
 }
 
-func ReadReqs(c *net.TCPConn, reader *bufio.Reader) (pkg *Task, err error) {
+func ReadReqs(c *net.TCPConn, reader *bufio.Reader) (t *Task, err error) {
 	//c.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
 	data, err := reader.ReadBytes('\n')
 	if err != nil {
@@ -178,30 +223,4 @@ func Write(c *net.TCPConn, buf []byte) (err error) {
 	_, err = c.Write(buf)
 
 	return
-}
-
-func ReadReply(pkg *UnitPkg) (err error) {
-	pkg.conn.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
-	reader := bufio.NewReader(net.Conn(pkg.conn))
-	if pkg.data, err = reader.ReadBytes('\n'); err != nil {
-		return
-	}
-	if !bytes.HasPrefix(pkg.data, LineNumBytes) && !bytes.HasPrefix(pkg.data, DataLenBytes) {
-		return
-	}
-
-	if bytes.HasPrefix(pkg.data, DataLenBytes) {
-		if bufL, err := strconv.Atoi(string(Trims(pkg.data, DataLenStr, ArgSplitStr))); err != nil || bufL < 0 {
-			return err
-		}
-
-		buf, err := reader.ReadBytes('\n')
-		if err == nil {
-			pkg.data = append(pkg.data, buf...)
-		}
-
-		return err
-	}
-
-	return readMutilLinesData(reader, &pkg.data)
 }
