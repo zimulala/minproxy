@@ -53,7 +53,20 @@ func (connp *ConnPool) NewUnitPool(size int, addr string, timeout, trys int) (p 
 	for i := 0; i < size; i++ {
 		p.pool <- nil
 	}
+	if err = p.Ping(); err != nil {
+		return
+	}
 	connp.SetUintPool(addr, p)
+
+	return
+}
+
+func (p *UnitConnPool) Ping() (err error) {
+	c, err := p.Get()
+	if err != nil {
+		return
+	}
+	defer p.Put(c)
 
 	return
 }
@@ -97,6 +110,7 @@ func (p *UnitConnPool) Put(conn *net.TCPConn) (err error) {
 }
 
 func (connp *ConnPool) GetConn(addr string) (c *net.TCPConn, err error) {
+	print("addr:", addr, "\n")
 	p, ok := connp.GetUintPool(addr)
 	if !ok {
 		return nil, ErrNotExistUnitPool
