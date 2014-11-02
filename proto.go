@@ -203,7 +203,6 @@ func readMutilLinesData(r *bufio.Reader, data *[]byte) (err error) {
 }
 
 func ReadReqs(c *net.TCPConn, reader *bufio.Reader) (t *Task, err error) {
-	//c.SetReadDeadline(time.Now().Add(ConnReadDeadline * time.Second))
 	data, err := reader.ReadBytes('\n')
 	if err != nil {
 		return

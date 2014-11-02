@@ -83,7 +83,7 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 			if err := task.MergeReplys(); err != nil {
 				task.PackErrorReply(err.Error())
 			}
-			err := Write(c, task.Buf)
+			Write(c, task.Buf)
 		case <-exitCh:
 			return
 		}
@@ -102,19 +102,21 @@ func (s *Server) GetConnsToWrite(addrs []string, task *Task) (err error) {
 			defer wg.Done()
 			if info.conn, err = s.connPool.GetConn(addrs[i]); err != nil {
 				info.badConn = true
-				atomic.StoreUint32(&isErr, 1)
+				atomic.StoreUint32(&isErr, GetConnErr)
 				return
 			}
 			if err = Write(info.conn, task.Buf); err != nil {
 				info.badConn = true
-				atomic.StoreUint32(&isErr, 1)
+				atomic.StoreUint32(&isErr, WriteToConnErr)
 			}
 		}()
 	}
 	wg.Wait()
 
-	if isErr != ConnOk {
-		err = ErrHandleConn
+	if isErr == GetConnErr {
+		err = ErrGetConn
+	} else if isErr == WriteToConnErr {
+		err = ErrWriteToConn
 	}
 
 	return

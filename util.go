@@ -14,13 +14,16 @@ const (
 	ConnRetrys       = 2
 	ConnSize         = 100
 	ConnReadDeadline = 5
-	ConnOk           = 0
+	GetConnErr       = 0
+	WriteToConnErr   = 1
+	ConnOk           = 2
 )
 
 var (
 	ErrBadConfig    = errors.New("bad config err")
 	ErrBadBucketKey = errors.New("bad bucket key err")
-	ErrHandleConn   = errors.New("get or write conn err")
+	ErrGetConn      = errors.New("get conn err")
+	ErrWriteToConn  = errors.New("write to conn err")
 )
 
 type Sigal struct{}
