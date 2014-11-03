@@ -162,5 +162,6 @@ func (s *Server) Serve(c net.Conn) {
 		}
 		taskCh <- req
 	}
+
 	conn.Close()
 }

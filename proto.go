@@ -16,8 +16,10 @@ const (
 )
 
 var (
-	LineNumBytes  = []byte("*")
-	DataLenBytes  = []byte("$")
+	TagBignBytes  = []byte{'{'}
+	TagEndBytes   = []byte{'}'}
+	LineNumBytes  = []byte{'*'}
+	DataLenBytes  = []byte{'$'}
 	ArgSplitBytes = []byte("\r\n")
 )
 
@@ -116,6 +118,10 @@ func (t *Task) UnmarshalPkg() (err error) {
 		}
 
 		t.OutInfos = append(t.OutInfos, &UnitPkg{uId: 0, key: elements[4], data: t.Buf})
+		if bytes.Contains(t.OutInfos[0].key, TagBignBytes) || bytes.Contains(t.OutInfos[0].key, TagEndBytes) {
+			index := bytes.Index(t.OutInfos[0].key, TagBignBytes)
+			t.OutInfos[0].key = t.OutInfos[0].key[index+1 : len(t.OutInfos[0].key)-1]
+		}
 		// argLen, err := strconv.Atoi(string(bytes.Trim(elements[3], DataLenStr)))
 		// if err != nil || argLen != len(key) {
 		// 	return ErrBadCmdFormat
