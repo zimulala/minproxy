@@ -98,7 +98,8 @@ $0\r\n
 func (t *Task) UnmarshalPkg() (err error) {
 	elements := bytes.SplitN(t.Buf, ArgSplitBytes, -1)
 	if !bytes.HasPrefix(elements[0], LineNumBytes) {
-		return ErrBadCmdFormat
+		t.OutInfos = append(t.OutInfos, &UnitPkg{uId: 0, key: elements[0], data: t.Buf})
+		return
 	}
 
 	lineN, err := strconv.Atoi(string(Trims(elements[0], LineNumStr, ArgSplitStr)))
@@ -214,11 +215,10 @@ func ReadReqs(c *net.TCPConn, reader *bufio.Reader) (t *Task, err error) {
 		return
 	}
 
-	if !bytes.HasPrefix(data, LineNumBytes) {
-		return nil, ErrBadCmdFormat
-	}
-	if err = readMutilLinesData(reader, &data); err != nil {
-		return
+	if bytes.HasPrefix(data, LineNumBytes) {
+		if err = readMutilLinesData(reader, &data); err != nil {
+			return
+		}
 	}
 
 	return &Task{Id: GenerateId(), Buf: data}, nil
