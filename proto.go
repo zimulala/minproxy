@@ -161,6 +161,9 @@ func (p *UnitPkg) ReadReply() (err error) {
 func (t *Task) MergeReplys() (err error) {
 	lines := len(t.OutInfos)
 	if lines == 1 {
+		if info.badConn {
+			return ErrReadConn
+		}
 		t.Buf = t.OutInfos[0].data
 		return
 	}
@@ -201,9 +204,6 @@ func readMutilLinesData(r *bufio.Reader, data *[]byte) (err error) {
 		if bufL, err := strconv.Atoi(string(Trims(buf, DataLenStr, ArgSplitStr))); err != nil || bufL < 0 {
 			return err
 		}
-		// else if bufL == 0 && i == (lines-1)*2 {
-		// 	return nil
-		// }
 	}
 
 	return
