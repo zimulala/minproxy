@@ -167,7 +167,7 @@ func (t *Task) MergeReplys() (err error) {
 		t.Buf = t.OutInfos[0].data
 		return
 	}
-
+	lllll
 	t.Buf = append(LineNumBytes, byte(lines))
 	for _, info := range t.OutInfos {
 		if info.badConn {
