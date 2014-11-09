@@ -161,7 +161,7 @@ func (p *UnitPkg) ReadReply() (err error) {
 func (t *Task) MergeReplys() (err error) {
 	lines := len(t.OutInfos)
 	if lines == 1 {
-		if info.badConn {
+		if t.OutInfos[0].badConn {
 			return ErrReadConn
 		}
 		t.Buf = t.OutInfos[0].data
