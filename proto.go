@@ -34,11 +34,11 @@ var (
 )
 
 type UnitPkg struct {
-	badConn bool
-	conn    *net.TCPConn
-	uId     int
-	key     []byte
-	data    []byte
+	conn     *net.TCPConn
+	uId      int
+	key      []byte
+	data     []byte
+	connAddr string
 }
 
 type Task struct {
@@ -161,7 +161,7 @@ func (p *UnitPkg) ReadReply() (err error) {
 func (t *Task) MergeReplys() (err error) {
 	lines := len(t.OutInfos)
 	if lines == 1 {
-		if t.OutInfos[0].badConn {
+		if t.OutInfos[0].connAddr != ConnOkStr {
 			return ErrReadConn
 		}
 		t.Buf = t.OutInfos[0].data
@@ -170,7 +170,7 @@ func (t *Task) MergeReplys() (err error) {
 
 	t.Buf = append(LineNumBytes, byte(lines))
 	for _, info := range t.OutInfos {
-		if info.badConn {
+		if info.connAddr != ConnOkStr {
 			return ErrReadConn
 		}
 		t.Buf = append(t.Buf, info.data...)
