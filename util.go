@@ -17,6 +17,7 @@ const (
 	GetConnErr       = 0
 	WriteToConnErr   = 1
 	ConnOk           = 2
+	ConnOkStr        = ""
 )
 
 var (
@@ -102,10 +103,10 @@ func Trims(src []byte, cutset ...string) []byte {
 
 func (s *Server) ReleaseConns(pkg *Task) {
 	for _, info := range pkg.OutInfos {
-		if !info.badConn {
+		if info.connAddr == ConnOkStr {
 			s.connPool.PutConn(info.conn.RemoteAddr().String(), info.conn)
 			continue
 		}
-		s.connPool.PutConn(info.conn.RemoteAddr().String(), nil)
+		s.connPool.PutConn(info.connAddr, nil)
 	}
 }
