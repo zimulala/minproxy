@@ -73,7 +73,7 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 				wg.Add(1)
 				go func() {
 					if err := info.ReadReply(); err != nil {
-						info.badConn = true
+						info.connAddr = info.conn.RemoteAddr().String()
 					}
 					wg.Done()
 				}()
@@ -101,12 +101,12 @@ func (s *Server) GetConnsToWrite(addrs []string, task *Task) (err error) {
 		go func() {
 			defer wg.Done()
 			if info.conn, err = s.connPool.GetConn(addrs[i]); err != nil {
-				info.badConn = true
+				info.connAddr = addrs[i]
 				atomic.StoreUint32(&isErr, GetConnErr)
 				return
 			}
 			if err = Write(info.conn, task.Buf); err != nil {
-				info.badConn = true
+				info.connAddr = addrs[i]
 				atomic.StoreUint32(&isErr, WriteToConnErr)
 			}
 		}()
@@ -162,6 +162,5 @@ func (s *Server) Serve(c net.Conn) {
 		}
 		taskCh <- req
 	}
-
 	conn.Close()
 }
