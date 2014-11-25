@@ -2,7 +2,6 @@ package util
 
 import (
 	"errors"
-	"net"
 	"sync"
 	"time"
 )
@@ -31,7 +30,7 @@ type UnitConnPool struct {
 	timeout int
 	trys    int
 	addr    string
-	pool    chan *net.TCPConn
+	pool    chan *Conn
 }
 
 func NewConnPool() *ConnPool {
@@ -49,7 +48,7 @@ func (connp *ConnPool) NewUnitPool(size int, addr string, timeout, trys int) (p 
 		return nil, ErrAddrEmpty
 	}
 
-	p = &UnitConnPool{addr: addr, size: size, timeout: timeout, trys: trys, pool: make(chan *net.TCPConn, size)}
+	p = &UnitConnPool{addr: addr, size: size, timeout: timeout, trys: trys, pool: make(chan *Conn, size)}
 	for i := 0; i < size; i++ {
 		p.pool <- nil
 	}
@@ -71,8 +70,7 @@ func (p *UnitConnPool) Ping() (err error) {
 	return
 }
 
-func (p *UnitConnPool) Get() (c *net.TCPConn, err error) {
-	var conn net.Conn
+func (p *UnitConnPool) Get() (c *Conn, err error) {
 	select {
 	case c = <-p.pool:
 		if c != nil {
@@ -82,7 +80,7 @@ func (p *UnitConnPool) Get() (c *net.TCPConn, err error) {
 	}
 
 	for i := 0; i < p.trys; i++ {
-		if conn, err = net.DialTimeout(ConnType, p.addr, time.Duration(p.timeout)*time.Second); err == nil {
+		if c, err = NewCon(ConnType, p.addr, time.Duration(p.timeout)*time.Second); err == nil {
 			break
 		}
 	}
@@ -90,18 +88,17 @@ func (p *UnitConnPool) Get() (c *net.TCPConn, err error) {
 		return
 	}
 
-	c, _ = conn.(*net.TCPConn)
 	c.SetKeepAlive(true)
 	c.SetNoDelay(true)
 
 	return
 }
 
-func (p *UnitConnPool) Put(conn *net.TCPConn) (err error) {
+func (p *UnitConnPool) Put(conn *Conn) (err error) {
 	select {
 	case p.pool <- conn:
 	default:
-		if conn != nil {
+		if conn.c != nil {
 			conn.Close()
 		}
 	}
@@ -109,8 +106,7 @@ func (p *UnitConnPool) Put(conn *net.TCPConn) (err error) {
 	return
 }
 
-func (connp *ConnPool) GetConn(addr string) (c *net.TCPConn, err error) {
-	print("addr:", addr, "\n")
+func (connp *ConnPool) GetConn(addr string) (c *Conn, err error) {
 	p, ok := connp.GetUintPool(addr)
 	if !ok {
 		return nil, ErrNotExistUnitPool
@@ -119,10 +115,10 @@ func (connp *ConnPool) GetConn(addr string) (c *net.TCPConn, err error) {
 	return p.Get()
 }
 
-func (connp *ConnPool) PutConn(addr string, conn *net.TCPConn) (err error) {
+func (connp *ConnPool) PutConn(addr string, conn *Conn) (err error) {
 	p, ok := connp.GetUintPool(addr)
 	if !ok {
-		if conn != nil {
+		if conn.c != nil {
 			conn.Close()
 		}
 		return
