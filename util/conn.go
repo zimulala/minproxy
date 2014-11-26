@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const DefaultMinReadBufferSize = 1024
+
 type Conn struct {
 	addr string
 	c    *net.TCPConn
@@ -18,7 +20,7 @@ func NewCon(network, addr string, timeout time.Duration) (*Conn, error) {
 		return nil, err
 	}
 
-	return &Conn{addr: addr, c: c.(*net.TCPConn), r: bufio.NewReader(c)}, nil
+	return &Conn{addr: addr, c: c.(*net.TCPConn), r: bufio.NewReaderSize(c, DefaultMinReadBufferSize)}, nil
 }
 
 func (c *Conn) Write(buf []byte) (err error) {
