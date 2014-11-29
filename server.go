@@ -58,32 +58,42 @@ func (s *Server) ListenAndServe() (err error) {
 	return
 }
 
+func ReadReply(task *Task) {
+	wg := sync.WaitGroup{}
+	for _, info := range task.OutInfos {
+		wg.Add(1)
+		go func() {
+			if err := info.ReadReply(); err != nil {
+				info.connAddr = info.conn.Addr()
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}
+
 func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Sigal) {
 	for {
 		select {
 		case task := <-taskCh:
 			if task.IsErrTask() {
-				Write(c, task.Buf)
+				Write(c, *task.Resp)
 				s.ReleaseConns(task)
 				break
 			}
 
-			wg := sync.WaitGroup{}
-			for _, info := range task.OutInfos {
-				wg.Add(1)
-				go func() {
-					if err := info.ReadReply(); err != nil {
-						info.connAddr = info.conn.RemoteAddr().String()
-					}
-					wg.Done()
-				}()
+			if len(task.OutInfos) == 1 {
+				if err := task.OutInfos[0].ReadReply(); err != nil {
+					task.OutInfos[0].connAddr = task.OutInfos[0].conn.Addr()
+				}
+			} else {
+				ReadReply(task)
 			}
 
-			wg.Wait()
 			if err := task.MergeReplys(); err != nil {
 				task.PackErrorReply(err.Error())
 			}
-			Write(c, task.Buf)
+			Write(c, *task.Resp)
 		case <-exitCh:
 			return
 		}
@@ -93,6 +103,16 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 }
 
 func (s *Server) GetConnsToWrite(addrs []string, task *Task) (err error) {
+	if len(task.OutInfos) == 1 {
+		if task.OutInfos[0].conn, err = s.connPool.GetConn(addrs[0]); err == nil {
+			err = task.OutInfos[0].conn.Write(task.OutInfos[0].data)
+		}
+		if err != nil {
+			task.OutInfos[0].connAddr = addrs[0]
+		}
+		return
+	}
+
 	isErr := uint32(ConnOk)
 	wg := sync.WaitGroup{}
 
@@ -105,7 +125,7 @@ func (s *Server) GetConnsToWrite(addrs []string, task *Task) (err error) {
 				atomic.StoreUint32(&isErr, GetConnErr)
 				return
 			}
-			if err = Write(info.conn, task.Buf); err != nil {
+			if err = info.conn.Write(info.data); err != nil {
 				info.connAddr = addrs[i]
 				atomic.StoreUint32(&isErr, WriteToConnErr)
 			}
