@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	TagBignByte   = []byte{'{'}
+	TagBeginByte  = []byte{'{'}
 	TagEndBytes   = []byte{'}'}
 	TagSplitByte  = []byte{','}
 	LineNumBytes  = []byte{'*'}
@@ -148,8 +148,8 @@ func (t *Task) UnmarshalPkg() (err error) {
 			return err
 		}
 		t.OutInfos = append(t.OutInfos, &UnitPkg{uId: 0, key: key, data: Append(t.Raw)})
-		if bytes.Contains(t.OutInfos[0].key, TagBignByte) || bytes.Contains(t.OutInfos[0].key, TagEndBytes) {
-			start := bytes.Index(t.OutInfos[0].key, TagBignByte)
+		if bytes.Contains(t.OutInfos[0].key, TagBeginByte) || bytes.Contains(t.OutInfos[0].key, TagEndBytes) {
+			start := bytes.Index(t.OutInfos[0].key, TagBeginByte)
 			end := bytes.Index(t.OutInfos[0].key, TagSplitByte)
 			if end < 0 {
 				end = bytes.Index(t.OutInfos[0].key, TagEndBytes)
