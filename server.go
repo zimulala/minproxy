@@ -2,6 +2,7 @@ package mincluster
 
 import (
 	"bufio"
+	"log"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -105,9 +106,11 @@ func (s *Server) handleReply(c *net.TCPConn, taskCh chan *Task, exitCh chan Siga
 func (s *Server) GetConnsToWrite(addrs []string, task *Task) (err error) {
 	if len(task.OutInfos) == 1 {
 		if task.OutInfos[0].conn, err = s.connPool.GetConn(addrs[0]); err == nil {
+			log.Println("GetConnsToWrite, addr:", addrs[0])
 			err = task.OutInfos[0].conn.Write(task.OutInfos[0].data)
 		}
 		if err != nil {
+			log.Println("GetConnsToWrite, err:", err)
 			task.OutInfos[0].connAddr = addrs[0]
 		}
 		return
@@ -143,6 +146,12 @@ func (s *Server) GetConnsToWrite(addrs []string, task *Task) (err error) {
 }
 
 func (s *Server) handleRequest(req *Task) (err error) {
+	defer func() {
+		if err != nil {
+			log.Println("handleRequest, err:", err)
+		}
+	}()
+
 	if err = req.UnmarshalPkg(); err != nil {
 		return
 	}
