@@ -3,6 +3,7 @@ package mincluster
 import (
 	"bytes"
 	"errors"
+	"log"
 	"strconv"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 const (
 	ConnTimeout      = 5
 	ConnRetrys       = 2
-	ConnSize         = 100
+	ConnSize         = 600
 	ConnReadDeadline = 5
 	GetConnErr       = 0
 	WriteToConnErr   = 1
@@ -93,18 +94,23 @@ func GenerateId() int64 {
 	return time.Now().UnixNano()
 }
 
-func Trims(src []byte, cutset ...string) []byte {
-	for _, cut := range cutset {
-		src = bytes.Trim(src, cut)
+func GetVal(s []byte) (val []byte, err error) {
+	size := len(s)
+	idx := bytes.IndexByte(s, '\n')
+	if idx < 0 || size < idx+1 || idx+1 > size-2 {
+		log.Println("GetVal, s:", string(s), " idx:", idx, " size:", size)
+		return nil, ErrBadReqFormat
 	}
 
-	return src
+	val = s[idx+1 : size-2]
+
+	return
 }
 
 func (s *Server) ReleaseConns(pkg *Task) {
 	for _, info := range pkg.OutInfos {
 		if info.connAddr == ConnOkStr {
-			s.connPool.PutConn(info.conn.RemoteAddr().String(), info.conn)
+			s.connPool.PutConn(info.conn.Addr(), info.conn)
 			continue
 		}
 		s.connPool.PutConn(info.connAddr, nil)
