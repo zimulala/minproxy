@@ -9,6 +9,6 @@ ToDo:
 Features
 ==========
 
-Supports most of Redis commands.
-Supports proxying to multiple servers.
+* Supports most of Redis commands.
+* Supports proxying to multiple servers.
 
