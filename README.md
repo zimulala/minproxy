@@ -1,6 +1,15 @@
-mincluster
+minproxy
 ==========
 
-a simple redis cluster
+A simple proxy based high performance redis cluster solution written in Go.
 
-Now is just the beginning ^_^
+ToDo:
+    Auto rebalance
+
+Features
+==========
+
+Fast.
+Supports most of Redis commands.
+Supports proxying to multiple servers.
+
