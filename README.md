@@ -9,7 +9,6 @@ ToDo:
 Features
 ==========
 
-Fast.
 Supports most of Redis commands.
 Supports proxying to multiple servers.
 
