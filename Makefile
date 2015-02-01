@@ -1,6 +1,7 @@
 all: build
 
 build:
+	@tree -L
 	go build -o bin/proxy ./cmd
 
 clean:
@@ -8,4 +9,4 @@ clean:
 	go clean -i ./...
 
 test:
-	go test ./..
+	go test ./...
