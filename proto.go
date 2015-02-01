@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"mincluster/util"
+	"github.com/zimulala/mincluster/util"
 )
 
 const (
