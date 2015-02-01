@@ -3,7 +3,7 @@ language: go
 go:
     - 1.3
 
-install: go build -v ./.. && make
+install: go build -v ./... && make
 
 script: make test
 
