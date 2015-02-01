@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/mincluster/util"
+	"github.com/zimulala/mincluster/util"
 )
 
 const (

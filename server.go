@@ -7,7 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/mincluster/util"
+	"github.com/zimulala/mincluster/util"
 )
 
 type Server struct {

@@ -7,8 +7,8 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
-	"github.com/mincluster"
-	"github.com/mincluster/util"
+	"github.com/zimulala/mincluster"
+	"github.com/zimulala/mincluster/util"
 )
 
 var (
