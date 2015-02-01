@@ -5,6 +5,9 @@ go:
 
 install: go build -v ./... && make
 
+script: 
+  - make test
+
 branches:
  only:
   - master
