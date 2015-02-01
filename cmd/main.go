@@ -7,8 +7,8 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
-	"mincluster"
-	"mincluster/util"
+	"github.com/mincluster"
+	"github.com/mincluster/util"
 )
 
 var (

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"mincluster/util"
+	"github.com/mincluster/util"
 )
 
 const (

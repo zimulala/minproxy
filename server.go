@@ -7,7 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"mincluster/util"
+	"github.com/mincluster/util"
 )
 
 type Server struct {
