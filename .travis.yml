@@ -3,7 +3,11 @@ language: go
 go:
     - 1.3
 
-install: go build -v ./... && make
+services:
+  - redis-server --port 6379
+  - redis-server --port 6380
+
+install: go get ./... && go build -v ./... && make
 
 script: 
   - ./bootstrap.sh
