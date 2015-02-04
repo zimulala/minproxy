@@ -160,18 +160,18 @@ func init() {
 	time.Sleep(5 * time.Second)
 }
 
-func TestBasic(t *testing.T) {
-	conn, err := redis.DialTimeout("tcp", addr, 10*time.Second, 0, 0)
-	if err != nil {
-		t.Fatalf("dial err:%+v", err)
-	}
+// func TestBasic(t *testing.T) {
+// 	conn, err := redis.DialTimeout("tcp", addr, 10*time.Second, 0, 0)
+// 	if err != nil {
+// 		t.Fatalf("dial err:%+v", err)
+// 	}
 
-	for _, tt := range writeTests {
-		reply, err := conn.Do(tt.args[0].(string), tt.args[1:]...)
-		if err != nil {
-			t.Errorf("Do(%v) returned error %v", tt.args, err)
-			continue
-		}
-		t.Log(tt.args[0].(string), " reply:", reply)
-	}
-}
+// 	for _, tt := range writeTests {
+// 		reply, err := conn.Do(tt.args[0].(string), tt.args[1:]...)
+// 		if err != nil {
+// 			t.Errorf("Do(%v) returned error %v", tt.args, err)
+// 			continue
+// 		}
+// 		t.Log(tt.args[0].(string), " reply:", reply)
+// 	}
+// }
