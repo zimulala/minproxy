@@ -11,6 +11,7 @@ install: go get ./... && go build -v ./... && make
 
 script: 
   - ./bootstrap.sh
+  - make test
 
 branches:
  only:
