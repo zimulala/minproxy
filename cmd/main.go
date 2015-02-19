@@ -7,8 +7,8 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
-	"github.com/zimulala/mincluster"
-	"github.com/zimulala/mincluster/util"
+	"github.com/zimulala/minproxy"
+	"github.com/zimulala/minproxy/util"
 )
 
 var (
@@ -20,7 +20,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	cfg := util.LoadConfigFile(*cfgPath)
-	pprof := cfg.GetString("Pprof")
+	pprof := cfg.GetString("prof_port")
 	if pprof == "" {
 		log.Println("bad config")
 		return
@@ -30,7 +30,7 @@ func main() {
 		log.Fatalln("failed to listen and serve, err:", http.ListenAndServe(":"+pprof, nil))
 	}()
 
-	s := mincluster.NewServer()
+	s := minproxy.NewServer()
 	if err := s.Start(cfg); err != nil {
 		log.Println("failed to start server, err:", err)
 	}
