@@ -1,13 +1,15 @@
-package mincluster
+package minproxy
 
 import (
 	"bytes"
 	"errors"
 	"log"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
 
-	"github.com/zimulala/mincluster/util"
+	"github.com/zimulala/minproxy/util"
 )
 
 const (
@@ -31,12 +33,12 @@ var (
 type Sigal struct{}
 
 func (s *Server) CheckConfig(cfg *util.Config) error {
-	s.id = cfg.GetInt("Id")
-	s.ip = cfg.GetString("Ip")
-	s.port = cfg.GetString("Port")
-	s.reBuckets = cfg.GetInt("ReBuckets")
-	buckets := cfg.GetArray("Buckets")
-	bucketAddrMap := cfg.GetInterface("ServerBucket").(map[string]interface{})
+	s.id = cfg.GetInt("id")
+	s.ip = cfg.GetString("ip")
+	s.port = cfg.GetString("port")
+	s.bucketBase = cfg.GetInt("bucket_base")
+	buckets := cfg.GetArray("buckets")
+	bucketAddrMap := cfg.GetInterface("bucket_addr").(map[string]interface{})
 
 	for _, b := range buckets {
 		s.buckets = append(s.buckets, int(b.(float64)))
@@ -66,6 +68,10 @@ func InitConnPool(addrMap map[int]string, connP *util.ConnPool) (err error) {
 	return
 }
 
+func GenerateId() int64 {
+	return time.Now().UnixNano()
+}
+
 func (s *Server) GetAddrs(pkg *Task) (addrs []string, err error) {
 	weights := make([]int64, len(pkg.OutInfos))
 	addrs = make([]string, len(pkg.OutInfos))
@@ -79,7 +85,7 @@ func (s *Server) GetAddrs(pkg *Task) (addrs []string, err error) {
 	s.bucketMux.RLock()
 	defer s.bucketMux.RUnlock()
 	for i, w := range weights {
-		bucket := int(w % int64(len(s.buckets)/s.reBuckets))
+		bucket := int(w % int64(len(s.buckets)/s.bucketBase))
 		addr, ok := s.bucketAddrMap[bucket]
 		if !ok {
 			return nil, ErrBadBucketKey
@@ -90,8 +96,55 @@ func (s *Server) GetAddrs(pkg *Task) (addrs []string, err error) {
 	return
 }
 
-func GenerateId() int64 {
-	return time.Now().UnixNano()
+func (s *Server) GetConns(addrs []string, task *Task) (err error) {
+	if len(task.OutInfos) == 1 {
+		if task.OutInfos[0].conn, err = s.connPool.GetConn(addrs[0]); err == nil {
+			err = task.OutInfos[0].conn.Write(task.OutInfos[0].data)
+		}
+		if err != nil {
+			task.OutInfos[0].connAddr = addrs[0]
+		}
+		return
+	}
+
+	isErr := uint32(ConnOk)
+	wg := sync.WaitGroup{}
+
+	for i, info := range task.OutInfos {
+		wg.Add(1)
+		go func() {
+			if info.conn, err = s.connPool.GetConn(addrs[i]); err != nil {
+				info.connAddr = addrs[i]
+				atomic.StoreUint32(&isErr, GetConnErr)
+				wg.Done()
+				return
+			}
+			if err = info.conn.Write(info.data); err != nil {
+				info.connAddr = addrs[i]
+				atomic.StoreUint32(&isErr, WriteToConnErr)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	if isErr == GetConnErr {
+		err = ErrGetConn
+	} else if isErr == WriteToConnErr {
+		err = ErrWriteToConn
+	}
+
+	return
+}
+
+func (s *Server) ReleaseConns(pkg *Task) {
+	for _, info := range pkg.OutInfos {
+		if info.connAddr == ConnOkStr {
+			s.connPool.PutConn(info.conn.Addr(), info.conn)
+			continue
+		}
+		s.connPool.PutConn(info.connAddr, nil)
+	}
 }
 
 func GetVal(s []byte) (val []byte, err error) {
@@ -105,14 +158,4 @@ func GetVal(s []byte) (val []byte, err error) {
 	val = s[idx+1 : size-2]
 
 	return
-}
-
-func (s *Server) ReleaseConns(pkg *Task) {
-	for _, info := range pkg.OutInfos {
-		if info.connAddr == ConnOkStr {
-			s.connPool.PutConn(info.conn.Addr(), info.conn)
-			continue
-		}
-		s.connPool.PutConn(info.connAddr, nil)
-	}
 }
