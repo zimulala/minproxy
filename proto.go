@@ -1,16 +1,15 @@
-package mincluster
+package minproxy
 
 import (
 	"bufio"
 	"bytes"
 	"errors"
 	"io"
-	"log"
 	"net"
 	"strconv"
 	"time"
 
-	"github.com/zimulala/mincluster/util"
+	"github.com/zimulala/minproxy/util"
 )
 
 const (
@@ -112,14 +111,6 @@ $0\r\n
 \r\n
 */
 func (t *Task) UnmarshalPkg() (err error) {
-	defer func() {
-		if err != nil {
-			log.Println("UnmarshalPkg, err:", err)
-		} else if len(t.OutInfos) > 0 {
-			log.Println("UnmarshalPkg, req:", string(t.OutInfos[0].data))
-		}
-	}()
-
 	if !bytes.HasPrefix(t.Raw[0], LineNumBytes) { //ping
 		t.OutInfos = append(t.OutInfos, &UnitPkg{uId: 0, key: t.Raw[0], data: Append(t.Raw)})
 		return
@@ -155,16 +146,31 @@ func (t *Task) UnmarshalPkg() (err error) {
 				end = bytes.Index(t.OutInfos[0].key, TagEndBytes)
 			}
 			if start < 0 || end < start {
-				log.Println("string:", string(t.OutInfos[0].key), " start:", start, " end:", end)
 				return ErrBadReqFormat
 			}
 			t.OutInfos[0].key = t.OutInfos[0].key[start+1 : end]
-			log.Println("key:", string(t.OutInfos[0].key))
 		}
-		// argLen, err := strconv.Atoi(string(bytes.Trim(t.Raw[3], DataSizeStr)))
-		// if err != nil || argLen != len(key) {
-		// 	return ErrBadReqFormat
-		// }
+	}
+
+	return
+}
+
+func (t *Task) MergeReplys() (err error) {
+	lines := len(t.OutInfos)
+	if lines == 1 {
+		if t.OutInfos[0].connAddr != ConnOkStr {
+			return ErrReadConn
+		}
+		t.Resp = &t.OutInfos[0].data
+		return
+	}
+
+	*t.Resp = append(LineNumBytes, byte(lines))
+	for _, info := range t.OutInfos {
+		if info.connAddr != ConnOkStr {
+			return ErrReadConn
+		}
+		*t.Resp = append(*t.Resp, info.data...)
 	}
 
 	return
@@ -200,24 +206,24 @@ func (p *UnitPkg) ReadReply() (err error) {
 		return
 	}
 
-	return readReplyData(p.conn, &p.data)
+	return p.readReplyData()
 }
 
-func readReplyData(r *util.Conn, data *[]byte) (err error) {
-	lines, err := strconv.Atoi(string((*data)[1 : len(*data)-2]))
+func (p *UnitPkg) readReplyData() (err error) {
+	lines, err := strconv.Atoi(string((p.data)[1 : len(p.data)-2]))
 	if err != nil {
 		return
 	}
 
 	for i := 0; i < lines; i++ {
-		buf, err := r.ReadBytes('\n')
+		buf, err := p.conn.ReadBytes('\n')
 		if err != nil {
 			return err
 		}
-		*data = append(*data, buf...)
+		p.data = append(p.data, buf...)
 
 		if bytes.HasPrefix(buf, DataSizeBytes) {
-			readBulk(r.R, buf, data)
+			readBulk(p.conn.R, buf, &p.data)
 			continue
 		}
 
@@ -225,27 +231,6 @@ func readReplyData(r *util.Conn, data *[]byte) (err error) {
 			i = -1
 			lines, err = strconv.Atoi(string(buf[1 : len(buf)-2]))
 		}
-	}
-
-	return
-}
-
-func (t *Task) MergeReplys() (err error) {
-	lines := len(t.OutInfos)
-	if lines == 1 {
-		if t.OutInfos[0].connAddr != ConnOkStr {
-			return ErrReadConn
-		}
-		t.Resp = &t.OutInfos[0].data
-		return
-	}
-
-	*t.Resp = append(LineNumBytes, byte(lines))
-	for _, info := range t.OutInfos {
-		if info.connAddr != ConnOkStr {
-			return ErrReadConn
-		}
-		*t.Resp = append(*t.Resp, info.data...)
 	}
 
 	return
@@ -264,7 +249,7 @@ func readLine(r *bufio.Reader) (b []byte, err error) {
 }
 
 //*3\r\n$6\r\nGETSET\r\n$3\r\nkey\r\n$0\r\n\r\n
-func readReqData(r *bufio.Reader) (raws [][]byte, err error) {
+func ReadReqData(r *bufio.Reader) (raws [][]byte, err error) {
 	buf, err := readLine(r)
 	if err != nil || len(buf) <= 2 {
 		return
@@ -294,7 +279,7 @@ func readReqData(r *bufio.Reader) (raws [][]byte, err error) {
 		raws = make([][]byte, lines+1)
 		raws[0] = buf
 		for i := 1; i <= lines; i++ {
-			raw, err := readReqData(r)
+			raw, err := ReadReqData(r)
 			if err != nil || len(raw) <= 0 {
 				return nil, err
 			}
@@ -304,18 +289,6 @@ func readReqData(r *bufio.Reader) (raws [][]byte, err error) {
 		raws = make([][]byte, 1)
 		raws[0] = buf
 	default:
-		err = ErrBadReqFormat
-	}
-
-	return
-}
-
-func ReadReqs(c *net.TCPConn, reader *bufio.Reader) (t *Task, err error) {
-	t = &Task{Id: GenerateId()}
-	if t.Raw, err = readReqData(reader); err != nil {
-		return
-	}
-	if len(t.Raw) <= 0 {
 		err = ErrBadReqFormat
 	}
 
