@@ -1,4 +1,4 @@
-package mincluster
+package minproxy
 
 import (
 	"github.com/garyburd/redigo/redis"
@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zimulala/mincluster/util"
+	"github.com/zimulala/minproxy/util"
 )
 
 const (
@@ -156,7 +156,6 @@ func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	cfg := util.LoadConfigFile(cfgPath)
 	go s.Start(cfg)
-
 	time.Sleep(5 * time.Second)
 }
 
